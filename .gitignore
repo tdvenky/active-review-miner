@@ -1,0 +1,10 @@
+credentials.config
+
+# Output directory
+output/
+
+# editor specific
+.idea/
+
+# cahced files
+__pycache__/
