@@ -1,6 +1,9 @@
 import argparse
 from collections import Counter
 from random import shuffle
+import constants
+
+from scipy.stats import entropy
 
 from sklearn import metrics
 from sklearn import svm
@@ -42,11 +45,15 @@ class ActiveMultiClassClassifier:
         shuffle(self.rating_reviews)  # Shuffle data first
         shuffle(self.userexperience_reviews)  # Shuffle data first
 
-        self.run_experiments_one_iteration('baseline')
+        self.run_experiments_one_iteration('baseline', strategy=None)
         print()
-        self.run_experiments_one_iteration('active')
+        self.run_experiments_one_iteration('active', constants.LEAST_CONFIDENT)
+        print()
+        self.run_experiments_one_iteration('active', constants.MARGIN_SAMPLING)
+        print()
+        self.run_experiments_one_iteration('active', constants.ENTROPY)
 
-    def run_experiments_one_iteration(self, classfication_type):
+    def run_experiments_one_iteration(self, classfication_type, strategy):
         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
 
         training_reviews_features, test_reviews_features = self.vectorize_reviews(training_reviews, test_reviews)
@@ -86,7 +93,8 @@ class ActiveMultiClassClassifier:
                        Counter(test_reviews_predicted_classes).get(7) > number_of_rows_to_add:
                         self.update_training_test_sets_active(
                             training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
-                            number_of_rows_to_add, test_reviews_predicted_classes, test_reviews_predicted_class_probabilities)
+                            number_of_rows_to_add, test_reviews_predicted_classes,
+                            test_reviews_predicted_class_probabilities, strategy)
                     else:
                         break
                 else:
@@ -173,14 +181,16 @@ class ActiveMultiClassClassifier:
 
     def update_training_test_sets_active(self, training_reviews, training_reviews_classes, test_reviews,
                                          test_reviews_classes, number_of_rows_to_add, test_reviews_predicted_classes,
-                                         test_reviews_predicted_class_probabilities):
+                                         test_reviews_predicted_class_probabilities, strategy):
 
         test_reviews_predicted_classes = test_reviews_predicted_classes.tolist()
 
-        # for i in range(len(test_reviews_predicted_class_probabilities)):
-        #     test_reviews_predicted_class_probabilities[i] = abs(test_reviews_predicted_class_probabilities[i][1] - 0.5)
-
-        self.calculate_least_confident_probabilities(test_reviews_predicted_class_probabilities)
+        if strategy == constants.LEAST_CONFIDENT:
+            self.calculate_least_confident_probabilities(test_reviews_predicted_class_probabilities)
+        elif strategy == constants.MARGIN_SAMPLING:
+            self.calculate_margin_sampling(test_reviews_predicted_class_probabilities)
+        elif strategy == constants.ENTROPY:
+            self.calculate_entropy(test_reviews_predicted_class_probabilities)
 
         bug_class_index_to_predicted_probabilities = dict()
         feature_class_index_to_predicted_probabilities = dict()
@@ -201,7 +211,8 @@ class ActiveMultiClassClassifier:
 
         number_of_bug_rows_added = 0
         for bug_index in sorted(bug_class_index_to_predicted_probabilities,
-                                key=bug_class_index_to_predicted_probabilities.get):
+                                key=bug_class_index_to_predicted_probabilities.get,
+                                reverse=True if strategy in [constants.ENTROPY] else False):
             pop_index_list.append(bug_index)
             training_reviews_classes.append(test_reviews_classes[bug_index])
             training_reviews.append(test_reviews[bug_index])
@@ -212,7 +223,8 @@ class ActiveMultiClassClassifier:
 
         number_of_feature_rows_added = 0
         for feature_index in sorted(feature_class_index_to_predicted_probabilities,
-                                    key=feature_class_index_to_predicted_probabilities.get):
+                                    key=feature_class_index_to_predicted_probabilities.get,
+                                    reverse=True if strategy in [constants.ENTROPY] else False):
             pop_index_list.append(feature_index)
             training_reviews_classes.append(test_reviews_classes[feature_index])
             training_reviews.append(test_reviews[feature_index])
@@ -222,7 +234,8 @@ class ActiveMultiClassClassifier:
 
         number_of_rating_rows_added = 0
         for rating_index in sorted(rating_class_index_to_predicted_probabilities,
-                                   key=rating_class_index_to_predicted_probabilities.get):
+                                   key=rating_class_index_to_predicted_probabilities.get,
+                                   reverse=True if strategy in [constants.ENTROPY] else False):
             pop_index_list.append(rating_index)
             training_reviews_classes.append(test_reviews_classes[rating_index])
             training_reviews.append(test_reviews[rating_index])
@@ -232,7 +245,8 @@ class ActiveMultiClassClassifier:
 
         number_of_user_experience_rows_added = 0
         for user_experience_index in sorted(user_experience_class_index_to_predicted_probabilities,
-                                            key=user_experience_class_index_to_predicted_probabilities.get):
+                                            key=user_experience_class_index_to_predicted_probabilities.get,
+                                            reverse=True if strategy in [constants.ENTROPY] else False):
             pop_index_list.append(user_experience_index)
             training_reviews_classes.append(test_reviews_classes[user_experience_index])
             training_reviews.append(test_reviews[user_experience_index])
@@ -254,6 +268,19 @@ class ActiveMultiClassClassifier:
             seven = 1 - test_reviews_predicted_class_probabilities[i][3]
 
             test_reviews_predicted_class_probabilities[i] = max(one, three, five, seven)
+
+    def calculate_entropy(self, test_reviews_predicted_class_probabilities):
+        for i in range(len(test_reviews_predicted_class_probabilities)):
+            test_reviews_predicted_class_probabilities[i] = entropy(test_reviews_predicted_class_probabilities[i])
+
+    def calculate_margin_sampling(self, test_reviews_predicted_class_probabilities):
+
+        for i in range(len(test_reviews_predicted_class_probabilities)):
+            test_reviews_predicted_class_probabilities[i].sort(reverse=True)
+
+            test_reviews_predicted_class_probabilities[i] = test_reviews_predicted_class_probabilities[i][0] - \
+                                                            test_reviews_predicted_class_probabilities[i][1]
+
 
 
 if __name__ == '__main__':
