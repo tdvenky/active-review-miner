@@ -43,6 +43,8 @@ class ActiveMultiClassClassifier:
         shuffle(self.userexperience_reviews)  # Shuffle data first
 
         self.run_experiments_one_iteration('baseline')
+        print()
+        self.run_experiments_one_iteration('active')
 
     def run_experiments_one_iteration(self, classfication_type):
         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
@@ -69,23 +71,29 @@ class ActiveMultiClassClassifier:
             else:
                 number_of_rows_to_add = len(test_reviews_classes)
 
-            if classfication_type == 'baseline':
-                if Counter(test_reviews_classes).get(1) > number_of_rows_to_add and \
-                        Counter(test_reviews_classes).get(3) > number_of_rows_to_add and \
-                        Counter(test_reviews_classes).get(5) > number_of_rows_to_add and \
-                        Counter(test_reviews_classes).get(7) > number_of_rows_to_add:
+            if Counter(test_reviews_classes).get(1) > number_of_rows_to_add and \
+               Counter(test_reviews_classes).get(3) > number_of_rows_to_add and \
+               Counter(test_reviews_classes).get(5) > number_of_rows_to_add and \
+               Counter(test_reviews_classes).get(7) > number_of_rows_to_add:
+                if classfication_type == 'baseline':
                     self.update_training_test_sets_baseline(
                         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
                         number_of_rows_to_add)
+                elif classfication_type == 'active':
+                    if Counter(test_reviews_predicted_classes).get(1) > number_of_rows_to_add and \
+                       Counter(test_reviews_predicted_classes).get(3) > number_of_rows_to_add and \
+                       Counter(test_reviews_predicted_classes).get(5) > number_of_rows_to_add and \
+                       Counter(test_reviews_predicted_classes).get(7) > number_of_rows_to_add:
+                        self.update_training_test_sets_active(
+                            training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
+                            number_of_rows_to_add, test_reviews_predicted_classes, test_reviews_predicted_class_probabilities)
+                    else:
+                        break
                 else:
-                    break
-            elif classfication_type == 'active':
-                self.update_training_test_sets_active(
-                    training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
-                    number_of_rows_to_add, test_reviews_predicted_classes, test_reviews_predicted_class_probabilities)
+                    print('Invalid classification type')
+                    exit(-2)
             else:
-                print('Invalid classification type')
-                exit(-2)
+                break
 
     def get_initial_data(self):
         initial_training_reviews = self.bug_reviews[:self.initial_train_size] + \
@@ -162,6 +170,90 @@ class ActiveMultiClassClassifier:
             # Add instances from the user experience class
             training_reviews.append(test_reviews.pop(test_reviews_classes.index(7)))
             training_reviews_classes.append(test_reviews_classes.pop(test_reviews_classes.index(7)))
+
+    def update_training_test_sets_active(self, training_reviews, training_reviews_classes, test_reviews,
+                                         test_reviews_classes, number_of_rows_to_add, test_reviews_predicted_classes,
+                                         test_reviews_predicted_class_probabilities):
+
+        test_reviews_predicted_classes = test_reviews_predicted_classes.tolist()
+
+        # for i in range(len(test_reviews_predicted_class_probabilities)):
+        #     test_reviews_predicted_class_probabilities[i] = abs(test_reviews_predicted_class_probabilities[i][1] - 0.5)
+
+        self.calculate_least_confident_probabilities(test_reviews_predicted_class_probabilities)
+
+        bug_class_index_to_predicted_probabilities = dict()
+        feature_class_index_to_predicted_probabilities = dict()
+        rating_class_index_to_predicted_probabilities = dict()
+        user_experience_class_index_to_predicted_probabilities = dict()
+
+        for i in range(len(test_reviews_predicted_class_probabilities)):
+            if test_reviews_predicted_classes[i] == 1:
+                bug_class_index_to_predicted_probabilities[i] = test_reviews_predicted_class_probabilities[i]
+            elif test_reviews_predicted_classes[i] == 3:
+                feature_class_index_to_predicted_probabilities[i] = test_reviews_predicted_class_probabilities[i]
+            elif test_reviews_predicted_classes[i] == 5:
+                rating_class_index_to_predicted_probabilities[i] = test_reviews_predicted_class_probabilities[i]
+            elif test_reviews_predicted_classes[i] == 7:
+                user_experience_class_index_to_predicted_probabilities[i] = test_reviews_predicted_class_probabilities[i]
+
+        pop_index_list = []
+
+        number_of_bug_rows_added = 0
+        for bug_index in sorted(bug_class_index_to_predicted_probabilities,
+                                key=bug_class_index_to_predicted_probabilities.get):
+            pop_index_list.append(bug_index)
+            training_reviews_classes.append(test_reviews_classes[bug_index])
+            training_reviews.append(test_reviews[bug_index])
+
+            number_of_bug_rows_added += 1
+            if number_of_bug_rows_added >= number_of_rows_to_add:
+                break
+
+        number_of_feature_rows_added = 0
+        for feature_index in sorted(feature_class_index_to_predicted_probabilities,
+                                    key=feature_class_index_to_predicted_probabilities.get):
+            pop_index_list.append(feature_index)
+            training_reviews_classes.append(test_reviews_classes[feature_index])
+            training_reviews.append(test_reviews[feature_index])
+            number_of_feature_rows_added += 1
+            if number_of_feature_rows_added >= number_of_rows_to_add:
+                break
+
+        number_of_rating_rows_added = 0
+        for rating_index in sorted(rating_class_index_to_predicted_probabilities,
+                                   key=rating_class_index_to_predicted_probabilities.get):
+            pop_index_list.append(rating_index)
+            training_reviews_classes.append(test_reviews_classes[rating_index])
+            training_reviews.append(test_reviews[rating_index])
+            number_of_rating_rows_added += 1
+            if number_of_rating_rows_added >= number_of_rows_to_add:
+                break
+
+        number_of_user_experience_rows_added = 0
+        for user_experience_index in sorted(user_experience_class_index_to_predicted_probabilities,
+                                            key=user_experience_class_index_to_predicted_probabilities.get):
+            pop_index_list.append(user_experience_index)
+            training_reviews_classes.append(test_reviews_classes[user_experience_index])
+            training_reviews.append(test_reviews[user_experience_index])
+            number_of_user_experience_rows_added += 1
+            if number_of_user_experience_rows_added >= number_of_rows_to_add:
+                break
+
+        pop_index_list.sort(reverse=True)
+        for i in pop_index_list:
+            test_reviews_classes.pop(i)
+            test_reviews.pop(i)
+
+    def calculate_least_confident_probabilities(self, test_reviews_predicted_class_probabilities):
+
+        for i in range(len(test_reviews_predicted_class_probabilities)):
+            one = 1 - test_reviews_predicted_class_probabilities[i][0]
+            three = 1 - test_reviews_predicted_class_probabilities[i][1]
+            five = 1 - test_reviews_predicted_class_probabilities[i][2]
+            seven = 1 - test_reviews_predicted_class_probabilities[i][3]
+
+            test_reviews_predicted_class_probabilities[i] = max(one, three, five, seven)
 
 
 if __name__ == '__main__':
