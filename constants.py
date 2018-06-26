@@ -1,7 +1,8 @@
 BUG_REVIEW_TYPE = "bug"
 FEATURE_REVIEW_TYPE = "feature"
 RATING_REVIEW_TYPE = "rating"
-USER_EXPERIENCE_REVIEW_TYPE = "user_experience"
+USER_EXPERIENCE_REVIEW_TYPE = "userexperience"
+MULTI_CLASS = "multiclass"
 
 BUG_TRAIN = "bug_report_data_train_1"
 NOT_BUG_TRAIN = "not_bug_report_data_train_1"
@@ -27,7 +28,7 @@ not_bug = 0
 bug = 1
 not_feature = 2
 feature = 3
-rating = 4
-not_rating = 5
-user_experience = 6
-not_user_experience = 7
+not_rating = 4
+rating = 5
+not_user_experience = 6
+user_experience = 7
