@@ -4,6 +4,11 @@ RATING_REVIEW_TYPE = "rating"
 USER_EXPERIENCE_REVIEW_TYPE = "userexperience"
 MULTI_CLASS = "multiclass"
 
+BASELINE_OUTFILE = "output/baseline.csv"
+LC_OUTFILE = "output/lc.csv"
+MARGIN_OUTFILE = "output/margin.csv"
+ENTROPY_OUTFILE = "output/entropy.csv"
+
 LEAST_CONFIDENT = "least_confident"
 MARGIN_SAMPLING = "margin_sampling"
 ENTROPY = "entropy"
