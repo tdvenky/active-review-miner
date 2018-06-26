@@ -1,4 +1,4 @@
-import argparse
+import csv
 from collections import Counter
 from random import shuffle
 import constants
@@ -27,6 +27,11 @@ class ActiveMultiClassClassifier:
             database.get_app_reviews_for_multi_class(constants.MULTI_CLASS)
         database.close()
 
+        self.baseline_results = dict()
+        self.active_lc_results = dict()
+        self.active_margin_results = dict()
+        self.active_entropy_results = dict()
+
     @staticmethod
     def get_db_credentials():
         config_file = open("credentials.config", "r")  # Filename should be a constant
@@ -44,15 +49,16 @@ class ActiveMultiClassClassifier:
         shuffle(self.rating_reviews)  # Shuffle data first
         shuffle(self.userexperience_reviews)  # Shuffle data first
 
-        self.run_experiments_one_iteration('baseline', strategy=None)
-        print()
-        self.run_experiments_one_iteration('active', strategy=constants.LEAST_CONFIDENT)
-        print()
-        self.run_experiments_one_iteration('active', strategy=constants.MARGIN_SAMPLING)
-        print()
-        self.run_experiments_one_iteration('active', strategy=constants.ENTROPY)
+        self.baseline_results = self.run_experiments_one_iteration('baseline', strategy=None)
+        self.active_lc_results = self.run_experiments_one_iteration('active', strategy=constants.LEAST_CONFIDENT)
+        self.active_margin_results = self.run_experiments_one_iteration('active', strategy=constants.MARGIN_SAMPLING)
+        self.active_entropy_results = self.run_experiments_one_iteration('active', strategy=constants.ENTROPY)
+
+        return self.baseline_results, self.active_lc_results, self.active_margin_results, self.active_entropy_results
 
     def run_experiments_one_iteration(self, classfication_type, strategy):
+        one_iteration_results = dict()
+
         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
 
         training_reviews_features, test_reviews_features = self.vectorize_reviews(training_reviews, test_reviews)
@@ -61,17 +67,20 @@ class ActiveMultiClassClassifier:
 
         while len(test_reviews_classes) >= self.minimum_test_set_size:
             training_reviews_features, test_reviews_features = self.vectorize_reviews(training_reviews, test_reviews)
-            print('Initial train size: ', training_reviews_features.shape, len(training_reviews_classes))
+            # print('Initial train size: ', training_reviews_features.shape, len(training_reviews_classes))
             # print('Initial test size: ', test_reviews_features.shape, len(test_reviews_classes))
 
             test_reviews_predicted_classes, test_reviews_predicted_class_probabilities = \
                 self.classify_app_reviews(training_reviews_features, training_reviews_classes, test_reviews_features)
 
-            # TODO: Get macro precision, recall, and F1
-            precision, recall, f1_score, macro = self.calculate_classifier_performance_metrics(
-                test_reviews_classes, test_reviews_predicted_classes)
+            precision, recall, f1_score, macro_precision, macro_recall, macro_f1_score = \
+                self.calculate_classifier_performance_metrics(test_reviews_classes, test_reviews_predicted_classes)
 
-            print('precision, recall, f1_score, macro: ', precision, recall, f1_score, macro)
+            one_iteration_results[len(training_reviews)] = [precision, recall, f1_score, macro_precision,
+                                                            macro_recall, macro_f1_score]
+
+            # print('precision, recall, f1_score, macro: ',
+            #       precision, recall, f1_score, macro_precision, macro_recall, macro_f1_score)
 
             if len(test_reviews_classes) >= self.train_increment_size:
                 number_of_rows_to_add = self.train_increment_size
@@ -102,6 +111,7 @@ class ActiveMultiClassClassifier:
                     exit(-2)
             else:
                 break
+        return one_iteration_results
 
     def get_initial_data(self):
         initial_training_reviews = self.bug_reviews[:self.initial_train_size] + \
@@ -158,8 +168,10 @@ class ActiveMultiClassClassifier:
         precision = metrics.precision_score(test_reviews_classes, predicted_test_reviews_classes, average=None)
         recall = metrics.recall_score(test_reviews_classes, predicted_test_reviews_classes, average=None)
         f1_score = metrics.f1_score(test_reviews_classes, predicted_test_reviews_classes, average=None)
-        macro = metrics.precision_score(test_reviews_classes, predicted_test_reviews_classes, average='macro')
-        return precision, recall, f1_score, macro
+        macro_precision = metrics.precision_score(test_reviews_classes, predicted_test_reviews_classes, average='macro')
+        macro_recall = metrics.recall_score(test_reviews_classes, predicted_test_reviews_classes, average='macro')
+        macro_f1_score = metrics.f1_score(test_reviews_classes, predicted_test_reviews_classes, average='macro')
+        return precision, recall, f1_score, macro_precision, macro_recall, macro_f1_score
 
     def update_training_test_sets_baseline(self, training_reviews, training_reviews_classes,
                                            test_reviews, test_reviews_classes, number_of_rows_to_add):
@@ -280,16 +292,42 @@ class ActiveMultiClassClassifier:
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument()
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument()
+    # args = parser.parse_args()
 
     initial_train_size = 100
     algorithm = "MultinomialNB"
     minimum_test_set_size = 80  # minimum_test_set_size should be at least twice the amount of train_increment_size
     train_increment_size = 10
+    num_of_runs = 2
 
-    active_review_classifier = ActiveMultiClassClassifier(
-        initial_train_size, algorithm, minimum_test_set_size, train_increment_size)
+    baseline_runs_results = [None] * num_of_runs
+    active_lc_runs_results = [None] * num_of_runs
+    active_margin_runs_results = [None] * num_of_runs
+    active_entropy_runs_results = [None] * num_of_runs
 
-    active_review_classifier.run_experiments()
+    for i in range(num_of_runs):
+        active_review_classifier = ActiveMultiClassClassifier(
+            initial_train_size, algorithm, minimum_test_set_size, train_increment_size)
+
+        baseline_runs_results[i], active_lc_runs_results[i], \
+        active_margin_runs_results[i], active_entropy_runs_results[i] = active_review_classifier.run_experiments()
+
+    # TODO write results to csv file
+    print(baseline_runs_results)
+    print(active_lc_runs_results)
+    print(active_margin_runs_results)
+    print(active_entropy_runs_results)
+
+    # with open(constants.BASELINE_OUTFILE, 'w', newline='') as outfile:
+    #     csv_writer = csv.writer(outfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    #     row = [None] * 15 * num_of_runs
+    #     for i in range(num_of_runs):
+    #         size_list = baseline_runs_results[i].keys().tolist()
+    #         row[i*15] = sizel[i]
+    #
+    #
+    #     for i in baseline_runs_results:
+    #         for key, values in i.items():
+    #             print(key, values)
