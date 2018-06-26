@@ -42,10 +42,10 @@ class ActiveReviewClassifier:
         # self.run_experiments_one_iteration('active')
 
     def run_experiments_one_iteration(self, classfication_type):
-        training_reviews_features, training_reviews_classes, test_reviews_features, test_reviews_classes = \
-            self.get_initial_data()
+        training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
 
-        while len(test_reviews_features) >= self.minimum_test_set_size:
+        while len(test_reviews_classes) >= self.minimum_test_set_size:
+            training_reviews_features, test_reviews_features = self.vectorize_reviews(training_reviews, test_reviews)
             print('Initial train size: ',  training_reviews_features.shape, len(training_reviews_classes))
             print('Initial test size: ', test_reviews_features.shape, len(test_reviews_classes))
 
@@ -57,18 +57,18 @@ class ActiveReviewClassifier:
 
             print('precision, recall, f1_score: ', precision, recall, f1_score)
 
-            if len(test_reviews_features) >= self.train_increment_size:
+            if len(test_reviews_classes) >= self.train_increment_size:
                 number_of_rows_to_add = self.train_increment_size
             else:
-                number_of_rows_to_add = len(test_reviews_features)
+                number_of_rows_to_add = len(test_reviews_classes)
 
             if classfication_type == 'baseline':
                 self.update_training_test_sets_baseline(
-                    training_reviews_features, training_reviews_classes, test_reviews_features, test_reviews_classes,
+                    training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
                     number_of_rows_to_add)
             elif classfication_type == 'active':
                 self.update_training_test_sets_active(
-                    training_reviews_features, training_reviews_classes, test_reviews_features, test_reviews_classes,
+                    training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
                     number_of_rows_to_add)
             else:
                 print('Invalid classification type')
@@ -87,10 +87,10 @@ class ActiveReviewClassifier:
         initial_testing_classes = [1] * len(self.reviews_pos_cls[self.initial_train_size:]) + \
                                   [0] * len(self.reviews_neg_cls[self.initial_train_size:])
 
-        initial_training_features, initial_test_features = self.vectorize_reviews(
-            initial_training_reviews, initial_testing_reviews)
+        # initial_training_features, initial_test_features = self.vectorize_reviews(
+        #     initial_training_reviews, initial_testing_reviews)
 
-        return initial_training_features, initial_training_classes, initial_test_features, initial_testing_classes
+        return initial_training_reviews, initial_training_classes, initial_testing_reviews, initial_testing_classes
 
     def vectorize_reviews(self, train_reviews, test_reviews):
         vectorizer = TfidfVectorizer(binary=True, use_idf=False, norm=None)  # Bag of words
@@ -122,19 +122,20 @@ class ActiveReviewClassifier:
         f1_score = metrics.f1_score(test_reviews_classes, predicted_test_reviews_classes)
         return precision, recall, f1_score
 
-    def update_training_test_sets_baseline(self, training_reviews_features, training_reviews_classes,
-                                           test_reviews_features, test_reviews_classes, number_of_rows_to_add):
+    def update_training_test_sets_baseline(self, training_reviews, training_reviews_classes,
+                                           test_reviews, test_reviews_classes, number_of_rows_to_add):
+        print("number_of_rows_to_add = ", number_of_rows_to_add)
         for i in range(number_of_rows_to_add):
             # Add instances from the positive class
-            training_reviews_features.append(test_reviews_features.pop(0))
+            training_reviews.append(test_reviews.pop(0))
             training_reviews_classes.append(test_reviews_classes.pop(0))
 
             # Add instances from the negative class
-            training_reviews_features.append(test_reviews_features.pop(test_reviews_classes.index(0)))
+            training_reviews.append(test_reviews.pop(test_reviews_classes.index(0)))
             training_reviews_classes.append(test_reviews_classes.pop(test_reviews_classes.index(0)))
 
-    def update_training_test_sets_active(self, training_reviews_features, training_reviews_classes,
-                                               test_reviews_features, test_reviews_classes, number_of_rows_to_add):
+    def update_training_test_sets_active(self, training_reviews, training_reviews_classes,
+                                               test_reviews, test_reviews_classes, number_of_rows_to_add):
         pass
 
 
@@ -143,10 +144,10 @@ if __name__ == '__main__':
     parser.add_argument('-r', action="store", dest="review_type", help="Review Type", type=str)
     args = parser.parse_args()
 
-    initial_train_size = 100
+    initial_train_size = 50
     algorithm = "MultinomialNB"
-    minimum_test_set_size = 10
-    train_increment_size = 20
+    minimum_test_set_size = 20  # minimum_test_set_size should be at least twice the amount of train_increment_size
+    train_increment_size = 10
 
     active_review_classifier = ActiveReviewClassifier(
         args.review_type, initial_train_size, algorithm, minimum_test_set_size, train_increment_size)
