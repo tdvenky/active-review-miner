@@ -15,8 +15,7 @@ from review_reader import ReviewReader
 
 
 class ActiveMultiClassClassifier:
-    def __init__(self, review_type, initial_train_size, algorithm, minimum_test_set_size, train_increment_size):
-        self.review_type = review_type
+    def __init__(self, initial_train_size, algorithm, minimum_test_set_size, train_increment_size):
         self.initial_train_size = initial_train_size
         self.algorithm = algorithm
         self.minimum_test_set_size = minimum_test_set_size
@@ -25,7 +24,7 @@ class ActiveMultiClassClassifier:
         username, password, host, database_name = ActiveMultiClassClassifier.get_db_credentials()
         database = ReviewReader(username, password, host, database_name)
         self.bug_reviews, self.feature_reviews, self.rating_reviews, self.userexperience_reviews = \
-            database.get_app_reviews_for_multi_class(self.review_type)
+            database.get_app_reviews_for_multi_class(constants.MULTI_CLASS)
         database.close()
 
     @staticmethod
@@ -47,11 +46,11 @@ class ActiveMultiClassClassifier:
 
         self.run_experiments_one_iteration('baseline', strategy=None)
         print()
-        self.run_experiments_one_iteration('active', constants.LEAST_CONFIDENT)
+        self.run_experiments_one_iteration('active', strategy=constants.LEAST_CONFIDENT)
         print()
-        self.run_experiments_one_iteration('active', constants.MARGIN_SAMPLING)
+        self.run_experiments_one_iteration('active', strategy=constants.MARGIN_SAMPLING)
         print()
-        self.run_experiments_one_iteration('active', constants.ENTROPY)
+        self.run_experiments_one_iteration('active', strategy=constants.ENTROPY)
 
     def run_experiments_one_iteration(self, classfication_type, strategy):
         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
@@ -68,6 +67,7 @@ class ActiveMultiClassClassifier:
             test_reviews_predicted_classes, test_reviews_predicted_class_probabilities = \
                 self.classify_app_reviews(training_reviews_features, training_reviews_classes, test_reviews_features)
 
+            # TODO: Get macro precision, recall, and F1
             precision, recall, f1_score, macro = self.calculate_classifier_performance_metrics(
                 test_reviews_classes, test_reviews_predicted_classes)
 
@@ -109,6 +109,7 @@ class ActiveMultiClassClassifier:
                                    self.rating_reviews[:self.initial_train_size] + \
                                    self.userexperience_reviews[:self.initial_train_size]
 
+        # TODO: Use constants.* instead of hard-coded integers
         initial_training_classes = [1] * len(self.bug_reviews[:self.initial_train_size]) + \
                                    [3] * len(self.feature_reviews[:self.initial_train_size]) + \
                                    [5] * len(self.rating_reviews[:self.initial_train_size]) + \
@@ -212,7 +213,7 @@ class ActiveMultiClassClassifier:
         number_of_bug_rows_added = 0
         for bug_index in sorted(bug_class_index_to_predicted_probabilities,
                                 key=bug_class_index_to_predicted_probabilities.get,
-                                reverse=True if strategy in [constants.ENTROPY] else False):
+                                reverse=False if strategy in [constants.MARGIN_SAMPLING] else True):
             pop_index_list.append(bug_index)
             training_reviews_classes.append(test_reviews_classes[bug_index])
             training_reviews.append(test_reviews[bug_index])
@@ -224,7 +225,7 @@ class ActiveMultiClassClassifier:
         number_of_feature_rows_added = 0
         for feature_index in sorted(feature_class_index_to_predicted_probabilities,
                                     key=feature_class_index_to_predicted_probabilities.get,
-                                    reverse=True if strategy in [constants.ENTROPY] else False):
+                                    reverse=False if strategy in [constants.MARGIN_SAMPLING] else True):
             pop_index_list.append(feature_index)
             training_reviews_classes.append(test_reviews_classes[feature_index])
             training_reviews.append(test_reviews[feature_index])
@@ -235,7 +236,7 @@ class ActiveMultiClassClassifier:
         number_of_rating_rows_added = 0
         for rating_index in sorted(rating_class_index_to_predicted_probabilities,
                                    key=rating_class_index_to_predicted_probabilities.get,
-                                   reverse=True if strategy in [constants.ENTROPY] else False):
+                                   reverse=False if strategy in [constants.MARGIN_SAMPLING] else True):
             pop_index_list.append(rating_index)
             training_reviews_classes.append(test_reviews_classes[rating_index])
             training_reviews.append(test_reviews[rating_index])
@@ -246,7 +247,7 @@ class ActiveMultiClassClassifier:
         number_of_user_experience_rows_added = 0
         for user_experience_index in sorted(user_experience_class_index_to_predicted_probabilities,
                                             key=user_experience_class_index_to_predicted_probabilities.get,
-                                            reverse=True if strategy in [constants.ENTROPY] else False):
+                                            reverse=False if strategy in [constants.MARGIN_SAMPLING] else True):
             pop_index_list.append(user_experience_index)
             training_reviews_classes.append(test_reviews_classes[user_experience_index])
             training_reviews.append(test_reviews[user_experience_index])
@@ -262,14 +263,11 @@ class ActiveMultiClassClassifier:
     def calculate_least_confident_probabilities(self, test_reviews_predicted_class_probabilities):
 
         for i in range(len(test_reviews_predicted_class_probabilities)):
-            one = 1 - test_reviews_predicted_class_probabilities[i][0]
-            three = 1 - test_reviews_predicted_class_probabilities[i][1]
-            five = 1 - test_reviews_predicted_class_probabilities[i][2]
-            seven = 1 - test_reviews_predicted_class_probabilities[i][3]
-
-            test_reviews_predicted_class_probabilities[i] = max(one, three, five, seven)
+            test_reviews_predicted_class_probabilities[i].sort(reverse=True)
+            test_reviews_predicted_class_probabilities[i] = 1 - test_reviews_predicted_class_probabilities[i][0]
 
     def calculate_entropy(self, test_reviews_predicted_class_probabilities):
+
         for i in range(len(test_reviews_predicted_class_probabilities)):
             test_reviews_predicted_class_probabilities[i] = entropy(test_reviews_predicted_class_probabilities[i])
 
@@ -277,15 +275,13 @@ class ActiveMultiClassClassifier:
 
         for i in range(len(test_reviews_predicted_class_probabilities)):
             test_reviews_predicted_class_probabilities[i].sort(reverse=True)
-
             test_reviews_predicted_class_probabilities[i] = test_reviews_predicted_class_probabilities[i][0] - \
                                                             test_reviews_predicted_class_probabilities[i][1]
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', action="store", dest="review_type", help="Review Type", type=str)
+    parser.add_argument()
     args = parser.parse_args()
 
     initial_train_size = 100
@@ -294,6 +290,6 @@ if __name__ == '__main__':
     train_increment_size = 10
 
     active_review_classifier = ActiveMultiClassClassifier(
-        args.review_type, initial_train_size, algorithm, minimum_test_set_size, train_increment_size)
+        initial_train_size, algorithm, minimum_test_set_size, train_increment_size)
 
     active_review_classifier.run_experiments()
