@@ -38,8 +38,8 @@ class ActiveReviewClassifier:
         shuffle(self.reviews_pos_cls)  # Shuffle data first
         shuffle(self.reviews_neg_cls)  # Shuffle data first
 
-        self.run_experiments_one_iteration('baseline')
-        # self.run_experiments_one_iteration('active')
+        # self.run_experiments_one_iteration('baseline')
+        self.run_experiments_one_iteration('active')
 
     def run_experiments_one_iteration(self, classfication_type):
         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
@@ -49,11 +49,11 @@ class ActiveReviewClassifier:
             print('Initial train size: ',  training_reviews_features.shape, len(training_reviews_classes))
             print('Initial test size: ', test_reviews_features.shape, len(test_reviews_classes))
 
-            initial_test_reviews_predicted_classes, initial_test_reviews_predicted_class_probabilities = \
+            test_reviews_predicted_classes, test_reviews_predicted_class_probabilities = \
                 self.classify_app_reviews(training_reviews_features, training_reviews_classes, test_reviews_features)
 
             precision, recall, f1_score = self.calculate_classifier_performance_metrics(
-                test_reviews_classes, initial_test_reviews_predicted_classes)
+                test_reviews_classes, test_reviews_predicted_classes)
 
             print('precision, recall, f1_score: ', precision, recall, f1_score)
 
@@ -69,7 +69,7 @@ class ActiveReviewClassifier:
             elif classfication_type == 'active':
                 self.update_training_test_sets_active(
                     training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
-                    number_of_rows_to_add)
+                    number_of_rows_to_add, test_reviews_predicted_classes, test_reviews_predicted_class_probabilities)
             else:
                 print('Invalid classification type')
                 exit(-2)
@@ -134,9 +134,49 @@ class ActiveReviewClassifier:
             training_reviews.append(test_reviews.pop(test_reviews_classes.index(0)))
             training_reviews_classes.append(test_reviews_classes.pop(test_reviews_classes.index(0)))
 
-    def update_training_test_sets_active(self, training_reviews, training_reviews_classes,
-                                               test_reviews, test_reviews_classes, number_of_rows_to_add):
-        pass
+    def update_training_test_sets_active(self, training_reviews, training_reviews_classes, test_reviews,
+                                         test_reviews_classes, number_of_rows_to_add, test_reviews_predicted_classes,
+                                         test_reviews_predicted_class_probabilities):
+        for i in range(len(test_reviews_predicted_class_probabilities)):
+            test_reviews_predicted_class_probabilities[i] = abs(test_reviews_predicted_class_probabilities[i][1] - 0.5)
+
+        test_reviews_predicted_classes = test_reviews_predicted_classes.tolist()
+
+
+        number_of_pos_rows_added = 0
+        number_of_neg_rows_added = 0
+
+        copy_test_reviews_predicted_class_probabilities = test_reviews_predicted_class_probabilities.copy()
+        print(len(test_reviews_predicted_classes), len(copy_test_reviews_predicted_class_probabilities))
+        while number_of_pos_rows_added < number_of_rows_to_add or number_of_neg_rows_added < number_of_rows_to_add:
+            index = copy_test_reviews_predicted_class_probabilities.index(min(copy_test_reviews_predicted_class_probabilities))
+            index_class = test_reviews_predicted_classes[index]
+            if index_class == 1:
+                if number_of_pos_rows_added >= number_of_rows_to_add:
+                    copy_test_reviews_predicted_class_probabilities.pop(index)
+                    # test_reviews_classes.pop(index)
+                    # test_reviews_predicted_classes.pop(index)
+                    # test_reviews.pop(index)
+                else:
+                    copy_test_reviews_predicted_class_probabilities.pop(index)
+                    test_reviews_predicted_class_probabilities.pop(index)
+                    test_reviews_predicted_classes.pop(index)
+                    training_reviews_classes.append(test_reviews_classes.pop(index))
+                    training_reviews.append(test_reviews.pop(index))
+                    number_of_pos_rows_added += 1
+            elif index_class == 0:
+                if number_of_neg_rows_added >= number_of_rows_to_add:
+                    copy_test_reviews_predicted_class_probabilities.pop(index)
+                    # test_reviews_classes.pop(index)
+                    # test_reviews_predicted_classes.pop(index)
+                    # test_reviews.pop(index)
+                else:
+                    copy_test_reviews_predicted_class_probabilities.pop(index)
+                    test_reviews_predicted_class_probabilities.pop(index)
+                    test_reviews_predicted_classes.pop(index)
+                    training_reviews_classes.append(test_reviews_classes.pop(index))
+                    training_reviews.append(test_reviews.pop(index))
+                    number_of_neg_rows_added += 1
 
 
 if __name__ == '__main__':
