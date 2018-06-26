@@ -38,7 +38,8 @@ class ActiveReviewClassifier:
         shuffle(self.reviews_pos_cls)  # Shuffle data first
         shuffle(self.reviews_neg_cls)  # Shuffle data first
 
-        # self.run_experiments_one_iteration('baseline')
+        self.run_experiments_one_iteration('baseline')
+        print()
         self.run_experiments_one_iteration('active')
 
     def run_experiments_one_iteration(self, classfication_type):
@@ -46,8 +47,8 @@ class ActiveReviewClassifier:
 
         while len(test_reviews_classes) >= self.minimum_test_set_size:
             training_reviews_features, test_reviews_features = self.vectorize_reviews(training_reviews, test_reviews)
-            print('Initial train size: ',  training_reviews_features.shape, len(training_reviews_classes))
-            print('Initial test size: ', test_reviews_features.shape, len(test_reviews_classes))
+            # print('Initial train size: ',  training_reviews_features.shape, len(training_reviews_classes))
+            # print('Initial test size: ', test_reviews_features.shape, len(test_reviews_classes))
 
             test_reviews_predicted_classes, test_reviews_predicted_class_probabilities = \
                 self.classify_app_reviews(training_reviews_features, training_reviews_classes, test_reviews_features)
@@ -124,7 +125,6 @@ class ActiveReviewClassifier:
 
     def update_training_test_sets_baseline(self, training_reviews, training_reviews_classes,
                                            test_reviews, test_reviews_classes, number_of_rows_to_add):
-        print("number_of_rows_to_add = ", number_of_rows_to_add)
         for i in range(number_of_rows_to_add):
             # Add instances from the positive class
             training_reviews.append(test_reviews.pop(0))
@@ -142,7 +142,6 @@ class ActiveReviewClassifier:
 
         for i in range(len(test_reviews_predicted_class_probabilities)):
             test_reviews_predicted_class_probabilities[i] = abs(test_reviews_predicted_class_probabilities[i][1] - 0.5)
-
         positive_class_index_to_predicted_probabilities = dict()
         negative_class_index_to_predicted_probabilities = dict()
         for i in range(len(test_reviews_predicted_class_probabilities)):
@@ -152,12 +151,12 @@ class ActiveReviewClassifier:
                 negative_class_index_to_predicted_probabilities[i] = test_reviews_predicted_class_probabilities[i]
 
         number_of_pos_rows_added = 0
+        pop_index_list = []
         for pos_index in sorted(positive_class_index_to_predicted_probabilities,
                                 key=positive_class_index_to_predicted_probabilities.get):
-            test_reviews_predicted_class_probabilities.pop(pos_index)
-            test_reviews_predicted_classes.pop(pos_index)
-            training_reviews_classes.append(test_reviews_classes.pop(pos_index))
-            training_reviews.append(test_reviews.pop(pos_index))
+            pop_index_list.append(pos_index)
+            training_reviews_classes.append(test_reviews_classes[pos_index])
+            training_reviews.append(test_reviews[pos_index])
 
             number_of_pos_rows_added += 1
             if number_of_pos_rows_added >= number_of_rows_to_add:
@@ -166,13 +165,17 @@ class ActiveReviewClassifier:
         number_of_neg_rows_added = 0
         for neg_index in sorted(negative_class_index_to_predicted_probabilities,
                                 key=negative_class_index_to_predicted_probabilities.get):
-            test_reviews_predicted_class_probabilities.pop(neg_index)
-            test_reviews_predicted_classes.pop(neg_index)
-            training_reviews_classes.append(test_reviews_classes.pop(neg_index))
-            training_reviews.append(test_reviews.pop(neg_index))
+            pop_index_list.append(neg_index)
+            training_reviews_classes.append(test_reviews_classes[neg_index])
+            training_reviews.append(test_reviews[neg_index])
             number_of_neg_rows_added += 1
             if number_of_neg_rows_added >= number_of_rows_to_add:
                 break
+
+        pop_index_list.sort(reverse=True)
+        for i in pop_index_list:
+            test_reviews_classes.pop(i)
+            test_reviews.pop(i)
 
 
 if __name__ == '__main__':
