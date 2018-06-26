@@ -38,36 +38,54 @@ class ActiveReviewClassifier:
         shuffle(self.reviews_pos_cls)  # Shuffle data first
         shuffle(self.reviews_neg_cls)  # Shuffle data first
 
-        initial_training_reviews_features, initial_training_reviews_classes, \
-        initial_test_reviews_features, initial_test_reviews_classes = self.get_initial_data()
+        self.run_experiments_one_iteration('baseline')
+        # self.run_experiments_one_iteration('active')
 
-        print('Initial train size: ',  initial_training_reviews_features.shape, len(initial_training_reviews_classes))
-        print('Initial test size: ', initial_test_reviews_features.shape, len(initial_test_reviews_classes))
+    def run_experiments_one_iteration(self, classfication_type):
+        training_reviews_features, training_reviews_classes, test_reviews_features, test_reviews_classes = \
+            self.get_initial_data()
 
-        initial_test_reviews_predicted_classes, initial_test_reviews_predicted_class_probabilities = \
-            self.classify_app_reviews(initial_training_reviews_features, initial_training_reviews_classes,
-                                      initial_test_reviews_features)
+        while len(test_reviews_features) >= self.minimum_test_set_size:
+            print('Initial train size: ',  training_reviews_features.shape, len(training_reviews_classes))
+            print('Initial test size: ', test_reviews_features.shape, len(test_reviews_classes))
 
-        precision, recall, f1_score = self.calculate_classifier_performance_metrics(
-            initial_test_reviews_classes, initial_test_reviews_predicted_classes)
+            initial_test_reviews_predicted_classes, initial_test_reviews_predicted_class_probabilities = \
+                self.classify_app_reviews(training_reviews_features, training_reviews_classes, test_reviews_features)
 
-        print('precision, recall, f1_score: ', precision, recall, f1_score)
+            precision, recall, f1_score = self.calculate_classifier_performance_metrics(
+                test_reviews_classes, initial_test_reviews_predicted_classes)
+
+            print('precision, recall, f1_score: ', precision, recall, f1_score)
+
+            if len(test_reviews_features) >= self.train_increment_size:
+                number_of_rows_to_add = self.train_increment_size
+            else:
+                number_of_rows_to_add = len(test_reviews_features)
+
+            if classfication_type == 'baseline':
+                self.update_training_test_sets_baseline(
+                    training_reviews_features, training_reviews_classes, test_reviews_features, test_reviews_classes,
+                    number_of_rows_to_add)
+            elif classfication_type == 'active':
+                self.update_training_test_sets_active(
+                    training_reviews_features, training_reviews_classes, test_reviews_features, test_reviews_classes,
+                    number_of_rows_to_add)
+            else:
+                print('Invalid classification type')
+                exit(-2)
 
     def get_initial_data(self):
-        pos_cls_initial_size = int(self.initial_train_size/2)
-        neg_cls_initial_size = int(self.initial_train_size - pos_cls_initial_size)
+        initial_training_reviews = self.reviews_pos_cls[:self.initial_train_size] + \
+                                   self.reviews_neg_cls[:self.initial_train_size]
 
-        initial_training_reviews = self.reviews_pos_cls[:pos_cls_initial_size] + \
-                                   self.reviews_neg_cls[:neg_cls_initial_size]
+        initial_training_classes = [1] * len(self.reviews_pos_cls[:self.initial_train_size]) + \
+                                   [0] * len(self.reviews_neg_cls[:self.initial_train_size])
 
-        initial_training_classes = [1] * len(self.reviews_pos_cls[:pos_cls_initial_size]) + \
-                                   [0] * len(self.reviews_neg_cls[:neg_cls_initial_size])
+        initial_testing_reviews = self.reviews_pos_cls[self.initial_train_size:] + \
+                                  self.reviews_neg_cls[self.initial_train_size:]
 
-        initial_testing_reviews = self.reviews_pos_cls[pos_cls_initial_size:] + \
-                                   self.reviews_neg_cls[neg_cls_initial_size:]
-
-        initial_testing_classes = [1] * len(self.reviews_pos_cls[pos_cls_initial_size:]) + \
-                                  [0] * len(self.reviews_neg_cls[neg_cls_initial_size:])
+        initial_testing_classes = [1] * len(self.reviews_pos_cls[self.initial_train_size:]) + \
+                                  [0] * len(self.reviews_neg_cls[self.initial_train_size:])
 
         initial_training_features, initial_test_features = self.vectorize_reviews(
             initial_training_reviews, initial_testing_reviews)
@@ -103,6 +121,21 @@ class ActiveReviewClassifier:
         recall = metrics.recall_score(test_reviews_classes, predicted_test_reviews_classes)
         f1_score = metrics.f1_score(test_reviews_classes, predicted_test_reviews_classes)
         return precision, recall, f1_score
+
+    def update_training_test_sets_baseline(self, training_reviews_features, training_reviews_classes,
+                                           test_reviews_features, test_reviews_classes, number_of_rows_to_add):
+        for i in range(number_of_rows_to_add):
+            # Add instances from the positive class
+            training_reviews_features.append(test_reviews_features.pop(0))
+            training_reviews_classes.append(test_reviews_classes.pop(0))
+
+            # Add instances from the negative class
+            training_reviews_features.append(test_reviews_features.pop(test_reviews_classes.index(0)))
+            training_reviews_classes.append(test_reviews_classes.pop(test_reviews_classes.index(0)))
+
+    def update_training_test_sets_active(self, training_reviews_features, training_reviews_classes,
+                                               test_reviews_features, test_reviews_classes, number_of_rows_to_add):
+        pass
 
 
 if __name__ == '__main__':
