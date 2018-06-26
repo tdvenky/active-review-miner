@@ -4,6 +4,10 @@ RATING_REVIEW_TYPE = "rating"
 USER_EXPERIENCE_REVIEW_TYPE = "userexperience"
 MULTI_CLASS = "multiclass"
 
+LEAST_CONFIDENT = "least_confident"
+MARGIN_SAMPLING = "margin_sampling"
+ENTROPY = "entropy"
+
 BUG_TRAIN = "bug_report_data_train_1"
 NOT_BUG_TRAIN = "not_bug_report_data_train_1"
 BUG_TEST = "bug_report_data_test_1"
