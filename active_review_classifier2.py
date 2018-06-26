@@ -137,46 +137,42 @@ class ActiveReviewClassifier:
     def update_training_test_sets_active(self, training_reviews, training_reviews_classes, test_reviews,
                                          test_reviews_classes, number_of_rows_to_add, test_reviews_predicted_classes,
                                          test_reviews_predicted_class_probabilities):
-        for i in range(len(test_reviews_predicted_class_probabilities)):
-            test_reviews_predicted_class_probabilities[i] = abs(test_reviews_predicted_class_probabilities[i][1] - 0.5)
 
         test_reviews_predicted_classes = test_reviews_predicted_classes.tolist()
 
+        for i in range(len(test_reviews_predicted_class_probabilities)):
+            test_reviews_predicted_class_probabilities[i] = abs(test_reviews_predicted_class_probabilities[i][1] - 0.5)
+
+        positive_class_index_to_predicted_probabilities = dict()
+        negative_class_index_to_predicted_probabilities = dict()
+        for i in range(len(test_reviews_predicted_class_probabilities)):
+            if test_reviews_predicted_classes[i] == 1:
+                positive_class_index_to_predicted_probabilities[i] = test_reviews_predicted_class_probabilities[i]
+            elif test_reviews_predicted_classes[i] == 0:
+                negative_class_index_to_predicted_probabilities[i] = test_reviews_predicted_class_probabilities[i]
 
         number_of_pos_rows_added = 0
-        number_of_neg_rows_added = 0
+        for pos_index in sorted(positive_class_index_to_predicted_probabilities,
+                                key=positive_class_index_to_predicted_probabilities.get):
+            test_reviews_predicted_class_probabilities.pop(pos_index)
+            test_reviews_predicted_classes.pop(pos_index)
+            training_reviews_classes.append(test_reviews_classes.pop(pos_index))
+            training_reviews.append(test_reviews.pop(pos_index))
 
-        copy_test_reviews_predicted_class_probabilities = test_reviews_predicted_class_probabilities.copy()
-        print(len(test_reviews_predicted_classes), len(copy_test_reviews_predicted_class_probabilities))
-        while number_of_pos_rows_added < number_of_rows_to_add or number_of_neg_rows_added < number_of_rows_to_add:
-            index = copy_test_reviews_predicted_class_probabilities.index(min(copy_test_reviews_predicted_class_probabilities))
-            index_class = test_reviews_predicted_classes[index]
-            if index_class == 1:
-                if number_of_pos_rows_added >= number_of_rows_to_add:
-                    copy_test_reviews_predicted_class_probabilities.pop(index)
-                    # test_reviews_classes.pop(index)
-                    # test_reviews_predicted_classes.pop(index)
-                    # test_reviews.pop(index)
-                else:
-                    copy_test_reviews_predicted_class_probabilities.pop(index)
-                    test_reviews_predicted_class_probabilities.pop(index)
-                    test_reviews_predicted_classes.pop(index)
-                    training_reviews_classes.append(test_reviews_classes.pop(index))
-                    training_reviews.append(test_reviews.pop(index))
-                    number_of_pos_rows_added += 1
-            elif index_class == 0:
-                if number_of_neg_rows_added >= number_of_rows_to_add:
-                    copy_test_reviews_predicted_class_probabilities.pop(index)
-                    # test_reviews_classes.pop(index)
-                    # test_reviews_predicted_classes.pop(index)
-                    # test_reviews.pop(index)
-                else:
-                    copy_test_reviews_predicted_class_probabilities.pop(index)
-                    test_reviews_predicted_class_probabilities.pop(index)
-                    test_reviews_predicted_classes.pop(index)
-                    training_reviews_classes.append(test_reviews_classes.pop(index))
-                    training_reviews.append(test_reviews.pop(index))
-                    number_of_neg_rows_added += 1
+            number_of_pos_rows_added += 1
+            if number_of_pos_rows_added >= number_of_rows_to_add:
+                break
+
+        number_of_neg_rows_added = 0
+        for neg_index in sorted(negative_class_index_to_predicted_probabilities,
+                                key=negative_class_index_to_predicted_probabilities.get):
+            test_reviews_predicted_class_probabilities.pop(neg_index)
+            test_reviews_predicted_classes.pop(neg_index)
+            training_reviews_classes.append(test_reviews_classes.pop(neg_index))
+            training_reviews.append(test_reviews.pop(neg_index))
+            number_of_neg_rows_added += 1
+            if number_of_neg_rows_added >= number_of_rows_to_add:
+                break
 
 
 if __name__ == '__main__':
