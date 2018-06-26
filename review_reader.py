@@ -33,9 +33,9 @@ class ReviewReader:
                 app_review = str(row[17])
                 review = Review(app_review)
                 if i.startswith('not'):
-                    reviews_neg_cls.append(review)
+                    reviews_neg_cls.append(app_review)
                 else:
-                    reviews_pos_cls.append(review)
+                    reviews_pos_cls.append(app_review)
 
         return reviews_pos_cls, reviews_neg_cls
 

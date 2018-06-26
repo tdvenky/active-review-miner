@@ -41,8 +41,8 @@ class ActiveReviewClassifier:
         initial_training_reviews_features, initial_training_reviews_classes, \
         initial_test_reviews_features, initial_test_reviews_classes = self.get_initial_data()
 
-        print('Initial train size: ',  len(initial_training_reviews_features), len(initial_training_reviews_classes))
-        print('Initial test size: ', len(initial_test_reviews_features), len(initial_test_reviews_classes))
+        print('Initial train size: ',  initial_training_reviews_features.shape, len(initial_training_reviews_classes))
+        print('Initial test size: ', initial_test_reviews_features.shape, len(initial_test_reviews_classes))
 
         initial_test_reviews_predicted_classes, initial_test_reviews_predicted_class_probabilities = \
             self.classify_app_reviews(initial_training_reviews_features, initial_training_reviews_classes,
