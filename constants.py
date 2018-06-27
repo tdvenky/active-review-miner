@@ -21,9 +21,9 @@ BUG_TEST = "bug_report_data_test_1"
 NOT_BUG_TEST = "not_bug_report_data_test_1"
 
 FEATURE_TRAIN = "feature_or_improvment_request_data_train_2"
-NOT_FEATURE_TRAIN = "not_feature_or_improvment_request_data_train_2"
+NOT_FEATURE_TRAIN = "not_feature_or_improvment_request_data_train_3"
 FEATURE_TEST = "feature_or_improvment_request_data_test_2"
-NOT_FEATURE_TEST = "not_feature_or_improvment_request_data_test_2"
+NOT_FEATURE_TEST = "not_feature_or_improvment_request_data_test_3"
 
 RATING_TRAIN = "rating_data_train_2"
 NOT_RATING_TRAIN = "not_rating_data_train_2"
