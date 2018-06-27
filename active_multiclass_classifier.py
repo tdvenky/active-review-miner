@@ -294,8 +294,11 @@ def write_results_csv(outfile_name, runs_results):
                 row_to_write = list()
                 row_to_write.append(run_index)
                 row_to_write.append(key)
-                for value_i in value:
-                    row_to_write.append(value_i)
+                for i in range(3):
+                    for j in value[i]:
+                        row_to_write.append(j)
+                for i in range(3,6):
+                    row_to_write.append(value[i])
                 csv_writer.writerow(row_to_write)
 
 
@@ -305,7 +308,7 @@ if __name__ == '__main__':
     algorithm = "MultinomialNB"
     minimum_test_set_size = 80  # minimum_test_set_size should be at least twice the amount of train_increment_size
     train_increment_size = 10
-    num_of_runs = 2
+    num_of_runs = 30
 
     baseline_runs_results = [None] * num_of_runs
     active_lc_runs_results = [None] * num_of_runs
