@@ -1,6 +1,8 @@
+import csv
 import argparse
 from random import shuffle
-
+from collections import Counter
+import constants
 from sklearn import metrics
 from sklearn import svm
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -23,6 +25,9 @@ class ActiveReviewClassifier:
         self.reviews_pos_cls, self.reviews_neg_cls = database.get_app_reviews(self.review_type)
         database.close()
 
+        self.baseline_results = dict()
+        self.active_results = dict()
+
     @staticmethod
     def get_db_credentials():
         config_file = open("credentials.config", "r")  # Filename should be a constant
@@ -38,11 +43,15 @@ class ActiveReviewClassifier:
         shuffle(self.reviews_pos_cls)  # Shuffle data first
         shuffle(self.reviews_neg_cls)  # Shuffle data first
 
-        self.run_experiments_one_iteration('baseline')
+        self.baseline_results = self.run_experiments_one_iteration('baseline')
         print()
-        self.run_experiments_one_iteration('active')
+        self.active_results = self.run_experiments_one_iteration('active')
+
+        return self.baseline_results, self.active_results
 
     def run_experiments_one_iteration(self, classfication_type):
+        one_iteration_results = dict()
+
         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
 
         while len(test_reviews_classes) >= self.minimum_test_set_size:
@@ -56,24 +65,36 @@ class ActiveReviewClassifier:
             precision, recall, f1_score = self.calculate_classifier_performance_metrics(
                 test_reviews_classes, test_reviews_predicted_classes)
 
-            print('precision, recall, f1_score: ', precision, recall, f1_score)
+            # print('train size, precision, recall, f1_score: ', len(training_reviews), precision, recall, f1_score)
+            one_iteration_results[len(training_reviews)] = [precision, recall, f1_score]
 
             if len(test_reviews_classes) >= self.train_increment_size:
                 number_of_rows_to_add = self.train_increment_size
             else:
                 number_of_rows_to_add = len(test_reviews_classes)
 
-            if classfication_type == 'baseline':
-                self.update_training_test_sets_baseline(
-                    training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
-                    number_of_rows_to_add)
-            elif classfication_type == 'active':
-                self.update_training_test_sets_active(
-                    training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
-                    number_of_rows_to_add, test_reviews_predicted_classes, test_reviews_predicted_class_probabilities)
+            if Counter(test_reviews_classes).get(1) > number_of_rows_to_add and \
+               Counter(test_reviews_classes).get(0) > number_of_rows_to_add:
+                if classfication_type == 'baseline':
+                    self.update_training_test_sets_baseline(
+                        training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
+                        number_of_rows_to_add)
+                elif classfication_type == 'active':
+                    if Counter(test_reviews_predicted_classes).get(1) > number_of_rows_to_add and \
+                       Counter(test_reviews_predicted_classes).get(0) > number_of_rows_to_add:
+                        self.update_training_test_sets_active(
+                            training_reviews, training_reviews_classes,
+                            test_reviews, test_reviews_classes, number_of_rows_to_add,
+                            test_reviews_predicted_classes, test_reviews_predicted_class_probabilities)
+                    else:
+                        break
+                else:
+                    print('Invalid classification type')
+                    exit(-2)
             else:
-                print('Invalid classification type')
-                exit(-2)
+                break
+
+        return one_iteration_results
 
     def get_initial_data(self):
         initial_training_reviews = self.reviews_pos_cls[:self.initial_train_size] + \
@@ -178,6 +199,21 @@ class ActiveReviewClassifier:
             test_reviews.pop(i)
 
 
+def write_results_csv(outfile_name, runs_results):
+    with open(outfile_name, 'w', newline='') as outfile:
+        csv_writer = csv.writer(outfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+
+        for run_index in range(len(runs_results)):
+            run_results = runs_results[run_index]
+            for key, value in run_results.items():
+                row_to_write = list()
+                row_to_write.append(run_index)
+                row_to_write.append(key)
+                for metric_value in range(len(value)):
+                    row_to_write.append(value[metric_value])
+                csv_writer.writerow(row_to_write)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-r', action="store", dest="review_type", help="Review Type", type=str)
@@ -187,8 +223,16 @@ if __name__ == '__main__':
     algorithm = "MultinomialNB"
     minimum_test_set_size = 20  # minimum_test_set_size should be at least twice the amount of train_increment_size
     train_increment_size = 10
+    num_of_runs = 30
 
-    active_review_classifier = ActiveReviewClassifier(
-        args.review_type, initial_train_size, algorithm, minimum_test_set_size, train_increment_size)
+    baseline_runs_results = [None] * num_of_runs
+    active_runs_results = [None] * num_of_runs
 
-    active_review_classifier.run_experiments()
+    for i in range(num_of_runs):
+        active_review_classifier = ActiveReviewClassifier(
+            args.review_type, initial_train_size, algorithm, minimum_test_set_size, train_increment_size)
+
+        baseline_runs_results[i], active_runs_results[i] = active_review_classifier.run_experiments()
+
+    write_results_csv(constants.BINARY_BASELINE_OUTFILE, baseline_runs_results)
+    write_results_csv(constants.BINARY_ACTIVE_OUTFILE, active_runs_results)

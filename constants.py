@@ -8,6 +8,8 @@ BASELINE_OUTFILE = "output/baseline.csv"
 LC_OUTFILE = "output/lc.csv"
 MARGIN_OUTFILE = "output/margin.csv"
 ENTROPY_OUTFILE = "output/entropy.csv"
+BINARY_BASELINE_OUTFILE = "output/binary_baseline.csv"
+BINARY_ACTIVE_OUTFILE = "output/binary_active.csv"
 
 LEAST_CONFIDENT = "least_confident"
 MARGIN_SAMPLING = "margin_sampling"
