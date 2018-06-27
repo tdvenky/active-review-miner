@@ -61,10 +61,6 @@ class ActiveMultiClassClassifier:
 
         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes = self.get_initial_data()
 
-        training_reviews_features, test_reviews_features = self.vectorize_reviews(training_reviews, test_reviews)
-        # print('Initial train size: ',  training_reviews_features.shape, len(training_reviews_classes))
-        # print('Initial test size: ', test_reviews_features.shape, len(test_reviews_classes))
-
         while len(test_reviews_classes) >= self.minimum_test_set_size:
             training_reviews_features, test_reviews_features = self.vectorize_reviews(training_reviews, test_reviews)
             # print('Initial train size: ', training_reviews_features.shape, len(training_reviews_classes))
@@ -134,9 +130,6 @@ class ActiveMultiClassClassifier:
                                   [3] * len(self.feature_reviews[self.initial_train_size:]) + \
                                   [5] * len(self.rating_reviews[self.initial_train_size:]) + \
                                   [7] * len(self.userexperience_reviews[self.initial_train_size:])
-
-        # initial_training_features, initial_test_features = self.vectorize_reviews(
-        #     initial_training_reviews, initial_testing_reviews)
 
         return initial_training_reviews, initial_training_classes, initial_testing_reviews, initial_testing_classes
 
@@ -291,10 +284,22 @@ class ActiveMultiClassClassifier:
                                                             test_reviews_predicted_class_probabilities[i][1]
 
 
+def write_results_csv(outfile_name, runs_results):
+    with open(outfile_name, 'w', newline='') as outfile:
+        csv_writer = csv.writer(outfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+
+        for run_index in range(len(runs_results)):
+            run_results = runs_results[run_index]
+            for key, value in run_results.items():
+                row_to_write = list()
+                row_to_write.append(run_index)
+                row_to_write.append(key)
+                for value_i in value:
+                    row_to_write.append(value_i)
+                csv_writer.writerow(row_to_write)
+
+
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument()
-    # args = parser.parse_args()
 
     initial_train_size = 100
     algorithm = "MultinomialNB"
@@ -314,20 +319,12 @@ if __name__ == '__main__':
         baseline_runs_results[i], active_lc_runs_results[i], \
         active_margin_runs_results[i], active_entropy_runs_results[i] = active_review_classifier.run_experiments()
 
-    # TODO write results to csv file
     print(baseline_runs_results)
     print(active_lc_runs_results)
     print(active_margin_runs_results)
     print(active_entropy_runs_results)
 
-    # with open(constants.BASELINE_OUTFILE, 'w', newline='') as outfile:
-    #     csv_writer = csv.writer(outfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-    #     row = [None] * 15 * num_of_runs
-    #     for i in range(num_of_runs):
-    #         size_list = baseline_runs_results[i].keys().tolist()
-    #         row[i*15] = sizel[i]
-    #
-    #
-    #     for i in baseline_runs_results:
-    #         for key, values in i.items():
-    #             print(key, values)
+    write_results_csv(constants.BASELINE_OUTFILE, baseline_runs_results)
+    write_results_csv(constants.LC_OUTFILE, active_lc_runs_results)
+    write_results_csv(constants.MARGIN_OUTFILE, active_margin_runs_results)
+    write_results_csv(constants.ENTROPY_OUTFILE, active_entropy_runs_results)
