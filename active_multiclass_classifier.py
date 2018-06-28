@@ -92,14 +92,17 @@ class ActiveMultiClassClassifier:
                         training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
                         number_of_rows_to_add)
                 elif classfication_type == 'active':
-                    if Counter(test_reviews_predicted_classes).get(1) > number_of_rows_to_add and \
-                       Counter(test_reviews_predicted_classes).get(3) > number_of_rows_to_add and \
-                       Counter(test_reviews_predicted_classes).get(5) > number_of_rows_to_add and \
-                       Counter(test_reviews_predicted_classes).get(7) > number_of_rows_to_add:
-                        self.update_training_test_sets_active(
-                            training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
-                            number_of_rows_to_add, test_reviews_predicted_classes,
-                            test_reviews_predicted_class_probabilities, strategy)
+                    if len(Counter(test_reviews_predicted_classes)) == 4:
+                        if Counter(test_reviews_predicted_classes).get(1) > number_of_rows_to_add and \
+                           Counter(test_reviews_predicted_classes).get(3) > number_of_rows_to_add and \
+                           Counter(test_reviews_predicted_classes).get(5) > number_of_rows_to_add and \
+                           Counter(test_reviews_predicted_classes).get(7) > number_of_rows_to_add:
+                            self.update_training_test_sets_active(
+                                training_reviews, training_reviews_classes, test_reviews, test_reviews_classes,
+                                number_of_rows_to_add, test_reviews_predicted_classes,
+                                test_reviews_predicted_class_probabilities, strategy)
+                        else:
+                            break
                     else:
                         break
                 else:
@@ -304,7 +307,7 @@ def write_results_csv(outfile_name, runs_results):
 
 if __name__ == '__main__':
 
-    initial_train_size = 100
+    initial_train_size = 70
     algorithm = "MultinomialNB"
     minimum_test_set_size = 80  # minimum_test_set_size should be at least twice the amount of train_increment_size
     train_increment_size = 10
