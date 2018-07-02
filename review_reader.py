@@ -1,7 +1,6 @@
 import MySQLdb
 
 import constants
-from review import Review
 
 
 class ReviewReader:
@@ -31,7 +30,6 @@ class ReviewReader:
 
             for row in self.cur.fetchall():
                 app_review = str(row[17])
-                review = Review(app_review)
                 if i.startswith('not'):
                     reviews_neg_cls.append(app_review)
                 else:
