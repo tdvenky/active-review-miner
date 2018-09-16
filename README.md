@@ -1,31 +1,39 @@
 
-# Active Review Miner
+# Active Review Miner: Active Learning Framework for Python
 
 Active learning is a machine learning paradigm that can be used to reduce the human effort involved in supervied learning.
 
-## Motivation
+This project contains Python implementation for the following **uncertanity sampling** strategies in active learning:
 
-We motivate the need for active learning via an example scenario, demonstrating that choosing the right training set can potentially enhance the review classification accuracy. Consider an app from google play store whose developers want to analyze it's reviews to identify the features requested by the app's users. They would like to employ an automated classifier to identify reviews corrosponding to feature requests.
-
-## Getting Started
-
-IN PROGRESS. (To be updated)
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+* Least Confident Prediction
+* Smallest Margin
+* Highest Entropy
 
 ### Prerequisites
 
-IN PROGRESS. (To be updated)
+(IN PROGRESS)
 
-What things you need to install the software and how to install them
+This project requires [scikit-learn](http://scikit-learn.org/stable/index.html) and [SciPy](https://www.scipy.org/) to run.
 
 ```
 Give examples
 ```
 
+## Getting Started
+
+(IN PROGRESS)
+
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+
+## Motivation
+
+(IN PROGRESS)
+
+We motivate the need for active learning via an example scenario, demonstrating that choosing the right training set can potentially enhance the review classification accuracy. Consider an app from google play store whose developers want to analyze it's reviews to identify the features requested by the app's users. They would like to employ an automated classifier to identify reviews corrosponding to feature requests.
+
 ### Installing
 
-IN PROGRESS. (To be updated)
+(IN PROGRESS)
 
 A step by step series of examples that tell you how to get a development env running
 
