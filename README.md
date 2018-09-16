@@ -13,11 +13,24 @@ This project contains Python implementation for the following **uncertanity samp
 
 (IN PROGRESS)
 
-This project requires [scikit-learn](http://scikit-learn.org/stable/index.html) and [SciPy](https://www.scipy.org/) to run.
+This project requires [scikit-learn](http://scikit-learn.org/stable/index.html) and [SciPy](https://www.scipy.org/), [MySQLdb](https://github.com/PyMySQL/mysqlclient-python) to run.
 
-```
-Give examples
-```
+* Scikit-learn
+
+    The instructions to install scikit-learn can be found at [Advanced installation instructions](http://scikit-learn.org/stable/developers/advanced_installation.html). Scikit-learn requires python, NumPy and SciPy to be installed first. 
+
+    The following examples is particular to windows, but instructions for MacOS and Linux can be found from the link above.
+
+    ```
+    pip install -U scikit-learn
+    ```
+* MySQLdb
+
+    ```
+    pip install mysqlclient
+    ```
+
+
 
 ## Getting Started
 
