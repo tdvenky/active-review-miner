@@ -19,7 +19,7 @@ This project requires [scikit-learn](http://scikit-learn.org/stable/index.html) 
 
     The instructions to install scikit-learn can be found at [Advanced installation instructions](http://scikit-learn.org/stable/developers/advanced_installation.html). Scikit-learn requires python, NumPy and SciPy to be installed first. 
 
-    The following examples is particular to windows, but instructions for MacOS and Linux can be found from the link above.
+    The following example is particular to windows, but instructions for MacOS and Linux can be found from the link above.
 
     ```
     pip install -U scikit-learn
@@ -74,5 +74,5 @@ End with an example of getting some data out of the system or using it for a lit
 ## Authors
 
 * **Venkatesh Thimma Dhinakaran**
-* **Pradeep Kumar Murukannaiah** - [Website](http://www.se.rit.edu/~pkm/)
+* **[Pradeep Kumar Murukannaiah](http://www.se.rit.edu/~pkm/)**
 
