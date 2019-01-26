@@ -1,6 +1,8 @@
 
 # Active Review Miner: Active Learning Framework for Python
 
+[App Review Analysis Via Active Learning: Reducing Supervision Effort without Compromising Classification Accuracy](https://ieeexplore.ieee.org/document/8491133)
+
 Active learning is a machine learning paradigm that can be used to reduce the human effort involved in supervied learning.
 
 This project contains Python implementation for the following **uncertanity sampling** strategies in active learning:
